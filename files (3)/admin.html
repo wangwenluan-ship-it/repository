@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理后台 · 投放看板</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="title-block">
+      <div class="eyebrow"><span class="dot"></span> 管理后台 · 仅你可用</div>
+      <h1 id="dramaTitle">数据发布台</h1>
+      <div class="sub">
+        <span>当前预览更新时间 · <b id="dateLabel">—</b></span>
+        <span>来源 · <b id="srcLabel">未加载</b></span>
+        <span><a class="mini-link" href="index.html" target="_blank">↗ 打开公开看板</a></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="adminbar">
+    <h2>① 配置 GitHub 令牌（一次性）</h2>
+    <div class="desc">令牌只存在你这台浏览器本地（localStorage），不会上传任何地方。建议用<b>细粒度令牌</b>，只授权本仓库的 <b>Contents: 读写</b>。
+      <a class="mini-link" href="https://github.com/settings/tokens?type=beta" target="_blank">去创建令牌 ↗</a></div>
+    <div class="arow">
+      <span class="lbl">令牌</span>
+      <input class="tok" id="tokInput" type="password" placeholder="ghp_… 或 github_pat_…" autocomplete="off">
+      <button class="btn btn-primary btn-sm" id="saveTok">保存</button>
+      <button class="btn btn-ghost btn-sm" id="clearTok">清除</button>
+      <span class="tok-saved" id="tokState"></span>
+    </div>
+
+    <div class="arow">
+      <span class="lbl">② 上传</span>
+      <label class="btn btn-ghost" for="adminFile">选择当天 Excel/CSV…</label>
+      <input type="file" id="adminFile" accept=".xls,.xlsx,.csv" style="display:none">
+      <span class="astatus" id="parseState">尚未选择文件</span>
+    </div>
+
+    <div class="arow">
+      <span class="lbl">③ 发布</span>
+      <button class="btn btn-primary" id="publishBtn" disabled>发布更新到线上</button>
+      <span class="astatus" id="pubState"></span>
+    </div>
+    <div class="desc" style="margin:8px 0 0">发布后约 1 分钟，所有人打开公开看板就会看到新数据（GitHub Pages 重新构建 + 缓存刷新）。下方是发布前的<b>预览</b>。</div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="panel">
+    <div class="controls">
+      <div class="field"><label>分组维度</label>
+        <div class="seg" id="groupSeg">
+          <button data-g="优化师" class="on">优化师</button>
+          <button data-g="媒体">媒体</button>
+          <button data-g="类型">类型</button>
+          <button data-g="事件">投放事件</button>
+        </div>
+      </div>
+      <div class="field"><label>剧目（可搜索）</label>
+        <div class="combo" id="dramaCombo">
+          <input type="text" id="f_drama" placeholder="搜索剧名…" autocomplete="off">
+          <svg class="combo-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          <div class="combo-list" id="dramaList"></div>
+        </div>
+      </div>
+      <div class="field"><label>媒体</label><select id="f_媒体"></select></div>
+      <div class="field"><label>类型</label><select id="f_类型"></select></div>
+      <div class="field"><label>投放事件</label><select id="f_事件"></select></div>
+      <div class="field"><label>优化师（可搜索）</label>
+        <div class="combo" id="optCombo">
+          <input type="text" id="f_优化师" placeholder="搜索优化师…" autocomplete="off">
+          <svg class="combo-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          <div class="combo-list" id="optList"></div>
+        </div>
+      </div>
+      <button class="reset" id="resetBtn">重置筛选</button>
+    </div>
+    <div class="resultbar">
+      <div>分组 <b id="rowCount">0</b> 行 · 当前筛选合计花费 <b id="filteredSpend">$0</b></div>
+      <div class="chiprow" id="chiprow"></div>
+    </div>
+    <div class="tablescroll">
+      <table id="tbl"><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody></table>
+    </div>
+  </div>
+
+  <div class="foot">发布台：上传当天回收文件 → 浏览器内解析为快照 → 预览无误后「发布更新」写回仓库的 data.json。</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="dashboard.js"></script>
+<script>
+/* ====== GitHub 配置（按你的仓库填好） ====== */
+const GH = { owner:'wangwenluan-ship-it', repo:'repository', branch:'main', path:'data.json' };
+
+const $=id=>document.getElementById(id);
+Dashboard.mount();
+
+/* 先尝试加载线上现有 data.json 作为初始预览 */
+fetch('data.json?t='+Date.now()).then(r=>r.ok?r.json():null).then(d=>{ if(d){ Dashboard.setSource('线上现有快照'); Dashboard.load(d); } }).catch(()=>{});
+
+/* ---- 令牌管理（localStorage） ---- */
+function getTok(){ return localStorage.getItem('gh_token')||''; }
+function refreshTokState(){ const t=getTok(); $('tokState').textContent=t?('已保存（…'+t.slice(-4)+'）'):'未保存'; $('tokState').style.color=t?'var(--ok)':'var(--ink-soft)'; }
+$('saveTok').onclick=()=>{ const v=$('tokInput').value.trim(); if(!v){ Dashboard.toast('请先粘贴令牌',true); return; } localStorage.setItem('gh_token',v); $('tokInput').value=''; refreshTokState(); Dashboard.toast('令牌已保存到本地'); };
+$('clearTok').onclick=()=>{ localStorage.removeItem('gh_token'); refreshTokState(); Dashboard.toast('已清除本地令牌'); };
+refreshTokState();
+
+/* ---- 上传解析 ---- */
+let lastData=null;
+$('adminFile').onchange=function(e){
+  const file=e.target.files[0]; if(!file) return;
+  $('parseState').textContent='解析中…'; $('parseState').className='astatus busy';
+  Dashboard.parseFile(file).then(dataObj=>{
+    lastData=dataObj;
+    Dashboard.setSource('待发布预览 · '+file.name);
+    Dashboard.load(dataObj);
+    $('parseState').textContent='已解析：'+dataObj.rows.length+' 行聚合 · 合计 $'+Math.round(dataObj.meta.total_spend).toLocaleString()+' · 更新时间 '+dataObj.meta.updated;
+    $('parseState').className='astatus ok';
+    $('publishBtn').disabled=false;
+  }).catch(err=>{ $('parseState').textContent='解析失败：'+err; $('parseState').className='astatus bad'; $('publishBtn').disabled=true; });
+  e.target.value='';
+};
+
+/* ---- base64(utf-8) ---- */
+function utf8ToB64(str){ const bytes=new TextEncoder().encode(str); let bin=''; const chunk=0x8000; for(let i=0;i<bytes.length;i+=chunk){ bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+chunk)); } return btoa(bin); }
+
+/* ---- 发布到 GitHub ---- */
+$('publishBtn').onclick=async function(){
+  if(!lastData){ Dashboard.toast('请先上传并解析文件',true); return; }
+  const token=getTok(); if(!token){ Dashboard.toast('请先在①保存 GitHub 令牌',true); return; }
+  const btn=$('publishBtn'); btn.disabled=true;
+  const set=(t,c)=>{ $('pubState').textContent=t; $('pubState').className='astatus '+(c||'busy'); };
+  const api=`https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${encodeURIComponent(GH.path)}`;
+  const headers={ 'Authorization':'Bearer '+token, 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' };
+  try{
+    set('读取当前文件版本…');
+    let sha=null;
+    const head=await fetch(api+'?ref='+GH.branch,{headers});
+    if(head.status===200){ sha=(await head.json()).sha; }
+    else if(head.status===401){ throw '令牌无效或无权限（401）'; }
+    else if(head.status===404){ sha=null; } /* 首次发布，文件还不存在 */
+    else if(head.status!==200){ throw '读取失败（'+head.status+'）'; }
+
+    set('提交新数据…');
+    const json=JSON.stringify(lastData);
+    const body={ message:'update data.json @ '+lastData.meta.updated, content:utf8ToB64(json), branch:GH.branch };
+    if(sha) body.sha=sha;
+    const put=await fetch(api,{ method:'PUT', headers:{...headers,'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    if(!put.ok){ const txt=await put.text(); throw '提交失败（'+put.status+'）'+(put.status===403?' 可能是令牌权限不足（需 Contents 读写）':'')+' '+txt.slice(0,180); }
+    set('✓ 已发布！约 1 分钟后公开看板生效（可硬刷新查看）。', 'ok');
+    Dashboard.toast('发布成功 ✓');
+  }catch(err){ set('✗ '+err,'bad'); Dashboard.toast('发布失败：'+err,true); }
+  finally{ btn.disabled=false; }
+};
+</script>
+</body>
+</html>
