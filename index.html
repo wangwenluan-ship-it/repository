@@ -3,154 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Luna's Second Choice · 投放数据看板</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<title>投放数据看板</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --ink:#0f1b2d; --ink-soft:#516079; --line:#e6ebf2; --line-2:#eef2f7;
-    --bg:#f4f7fb; --card:#ffffff;
-    --blue:#2c5282; --blue-deep:#1f4e79; --blue-bright:#2f6fed; --blue-tint:#eaf2ff;
-    --ok:#15803d; --ok-bg:#e7f6ec; --bad:#c1372e; --bad-bg:#fceceb; --mid:#b06a14; --mid-bg:#fbf2e2;
-    --shadow:0 1px 2px rgba(16,27,45,.04), 0 8px 28px -14px rgba(16,27,45,.18);
-    --shadow-sm:0 1px 2px rgba(16,27,45,.05), 0 2px 8px -4px rgba(16,27,45,.12);
-    --radius:16px;
-    --num:'Sora', ui-sans-serif, system-ui;
-    --sans:'Manrope','PingFang SC','Microsoft YaHei',ui-sans-serif,system-ui,sans-serif;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html,body{background:
-      radial-gradient(1200px 500px at 88% -10%, #e8f0ff 0%, rgba(232,240,255,0) 60%),
-      radial-gradient(900px 420px at 0% 0%, #eef4ff 0%, rgba(238,244,255,0) 55%),
-      var(--bg);
-    color:var(--ink); font-family:var(--sans); -webkit-font-smoothing:antialiased;
-    font-feature-settings:"tnum" 1;}
-  .wrap{max-width:1180px; margin:0 auto; padding:30px 22px 80px;}
-
-  .head{display:flex; align-items:flex-start; justify-content:space-between; gap:18px; flex-wrap:wrap; margin-bottom:22px}
-  .title-block .eyebrow{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--blue);
-    font-weight:700; display:flex; align-items:center; gap:8px}
-  .dot{width:7px;height:7px;border-radius:50%;background:var(--blue-bright);box-shadow:0 0 0 4px var(--blue-tint)}
-  h1{font-family:var(--num); font-weight:800; font-size:30px; line-height:1.1; letter-spacing:-.02em; margin-top:8px}
-  .sub{color:var(--ink-soft); font-size:13px; margin-top:8px; display:flex; gap:14px; flex-wrap:wrap; align-items:center}
-  .sub b{color:var(--ink); font-weight:600}
-  .upload-btn{display:inline-flex; align-items:center; gap:9px; cursor:pointer; user-select:none;
-    background:var(--blue-deep); color:#fff; font-family:var(--sans); font-weight:700; font-size:13.5px;
-    border:none; padding:12px 18px; border-radius:12px; box-shadow:var(--shadow-sm); transition:.18s;}
-  .upload-btn:hover{transform:translateY(-1px); background:#173d61}
-  .upload-btn svg{width:16px;height:16px}
-  .upload-hint{font-size:11.5px; color:var(--ink-soft); margin-top:8px; text-align:right; max-width:240px; line-height:1.5}
-
-  .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px}
-  .stat{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px;
-    box-shadow:var(--shadow-sm); position:relative; overflow:hidden}
-  .stat::after{content:""; position:absolute; right:-30px; top:-30px; width:90px;height:90px;border-radius:50%;
-    background:radial-gradient(circle,var(--blue-tint),transparent 70%); opacity:.7}
-  .stat .k{font-size:12px; color:var(--ink-soft); font-weight:600}
-  .stat .v{font-family:var(--num); font-weight:800; font-size:27px; margin-top:7px; letter-spacing:-.02em; position:relative}
-  .stat .meta{font-size:11.5px; color:var(--ink-soft); margin-top:5px}
-
-  .panel{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden}
-  .controls{display:flex; flex-wrap:wrap; gap:18px 26px; align-items:flex-end; padding:18px 22px;
-    border-bottom:1px solid var(--line-2); background:linear-gradient(180deg,#fbfdff,#ffffff)}
-  .field{display:flex; flex-direction:column; gap:7px}
-  .field label{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft)}
-  select,input[type=text]{font-family:var(--sans); font-size:13.5px; font-weight:600; color:var(--ink);
-    border:1px solid var(--line); background:#fff; padding:9px 13px; border-radius:10px; min-width:150px; outline:none;
-    transition:.15s; cursor:pointer; box-shadow:0 1px 1px rgba(16,27,45,.03)}
-  input[type=text]{cursor:text; font-weight:500}
-  select:focus,input:focus{border-color:var(--blue-bright); box-shadow:0 0 0 3px var(--blue-tint)}
-  select:hover{border-color:#c8d3e2}
-
-  .combo{position:relative; min-width:230px}
-  .combo > input{min-width:230px; width:230px; padding-right:34px; font-weight:600}
-  .combo-caret{position:absolute; right:11px; top:50%; transform:translateY(-50%); width:15px;height:15px;
-    color:var(--ink-soft); pointer-events:none; transition:.18s}
-  .combo.open .combo-caret{transform:translateY(-50%) rotate(180deg); color:var(--blue-bright)}
-  .combo-list{position:absolute; top:calc(100% + 6px); left:0; right:0; background:#fff; border:1px solid var(--line);
-    border-radius:12px; box-shadow:var(--shadow); max-height:300px; overflow-y:auto; z-index:30; padding:5px; display:none}
-  .combo.open .combo-list{display:block}
-  .combo-opt{padding:9px 12px; border-radius:8px; font-size:13.5px; font-weight:600; color:var(--ink); cursor:pointer;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; justify-content:space-between; gap:10px; align-items:center}
-  .combo-opt:hover{background:var(--blue-tint); color:var(--blue-deep)}
-  .combo-opt.sel{color:var(--blue-deep)}
-  .combo-opt.sel::after{content:"✓"; font-size:12px}
-  .combo-opt .cnt{font-family:var(--num); font-size:11px; font-weight:600; color:var(--ink-soft); background:#f0f3f8; padding:1px 7px; border-radius:999px}
-  .combo-opt.allopt{font-weight:800; border-bottom:1px solid var(--line-2); border-radius:8px 8px 0 0; margin-bottom:3px}
-  .combo-empty{padding:14px 12px; font-size:12.5px; color:var(--ink-soft); text-align:center}
-
-  .seg{display:inline-flex; background:#eef2f8; border:1px solid var(--line); border-radius:11px; padding:3px; gap:2px}
-  .seg button{font-family:var(--sans); font-weight:700; font-size:13px; color:var(--ink-soft); background:transparent;
-    border:none; padding:7px 14px; border-radius:8px; cursor:pointer; transition:.15s; white-space:nowrap}
-  .seg button.on{background:#fff; color:var(--blue-deep); box-shadow:var(--shadow-sm)}
-  .seg button:hover:not(.on){color:var(--ink)}
-
-  .reset{margin-left:auto; align-self:flex-end; font-family:var(--sans); font-weight:700; font-size:12.5px;
-    color:var(--ink-soft); background:transparent; border:1px solid var(--line); padding:9px 14px; border-radius:10px;
-    cursor:pointer; transition:.15s}
-  .reset:hover{color:var(--bad); border-color:#f0c9c5}
-
-  .resultbar{display:flex; justify-content:space-between; align-items:center; padding:13px 22px; font-size:12.5px;
-    color:var(--ink-soft); background:#fbfdff; border-bottom:1px solid var(--line-2)}
-  .resultbar b{color:var(--ink); font-family:var(--num); font-weight:700}
-  .chiprow{display:flex; gap:7px; flex-wrap:wrap}
-  .chip{font-size:11px; font-weight:700; background:var(--blue-tint); color:var(--blue-deep); padding:4px 9px; border-radius:999px}
-
-  .tablescroll{overflow-x:auto}
-  table{width:100%; border-collapse:collapse; font-size:13.5px}
-  thead th{position:sticky; top:0; background:var(--blue); color:#fff; font-weight:600; font-size:12px;
-    text-align:right; padding:13px 16px; white-space:nowrap; cursor:pointer; user-select:none}
-  thead th:first-child{text-align:left}
-  thead th .arr{opacity:.4; font-size:10px; margin-left:3px}
-  thead th.sorted .arr{opacity:1}
-  tbody td{padding:12px 16px; text-align:right; border-bottom:1px solid var(--line-2); font-family:var(--num);
-    font-weight:500; white-space:nowrap; color:var(--ink)}
-  tbody td:first-child{text-align:left; font-family:var(--sans); font-weight:700}
-  tbody tr:hover{background:#f7faff}
-  .rank{display:inline-flex; align-items:center; justify-content:center; min-width:22px; height:22px; font-family:var(--num);
-    font-size:11px; font-weight:700; color:var(--blue-deep); background:var(--blue-tint); border-radius:7px; margin-right:10px}
-  tr.total td{background:var(--blue-deep); color:#fff; font-weight:700; border:none; font-size:13.5px}
-  tr.total td:first-child{font-family:var(--sans)}
-  .pill{display:inline-block; padding:3px 9px; border-radius:999px; font-size:12px; font-weight:700; font-family:var(--sans)}
-  .ok{color:var(--ok); background:var(--ok-bg)} .bad{color:var(--bad); background:var(--bad-bg)} .mid{color:var(--mid); background:var(--mid-bg)}
-  .bar{height:6px; border-radius:4px; background:var(--line-2); position:relative; display:inline-block; vertical-align:middle; width:80px}
-  .bar > i{position:absolute; left:0; top:0; bottom:0; border-radius:4px; background:linear-gradient(90deg,var(--blue-bright),var(--blue))}
-  .share-cell{display:flex; align-items:center; gap:9px; justify-content:flex-end}
-  .share-cell span{min-width:42px; text-align:right}
-  .empty{padding:50px; text-align:center; color:var(--ink-soft); font-size:14px}
-
-  .foot{margin-top:18px; font-size:11.5px; color:var(--ink-soft); text-align:center; line-height:1.7}
-  .toast{position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(20px); background:var(--ink); color:#fff;
-    padding:13px 20px; border-radius:12px; font-size:13.5px; font-weight:600; box-shadow:0 12px 30px -10px rgba(0,0,0,.4);
-    opacity:0; pointer-events:none; transition:.25s; z-index:50}
-  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
-  .toast.err{background:var(--bad)}
-  @media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)} h1{font-size:24px} .controls{gap:14px}}
-</style>
+<link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
 <div class="wrap">
-
   <div class="head">
     <div class="title-block">
       <div class="eyebrow"><span class="dot"></span> ReelShort EN · 投放数据看板</div>
-      <h1 id="dramaTitle">The Luna's Second Choice</h1>
+      <h1 id="dramaTitle">投放数据看板</h1>
       <div class="sub">
-        <span>更新时间 · <b id="dateLabel">—</b></span>
-        <span>口径 · <b>Ad 级回收</b></span>
-        <span>来源 · <b id="srcLabel">内置快照</b></span>
+        <span>更新时间 · <b id="dateLabel">加载中…</b></span>
+        <span style="display:none">口径 · <b>Ad 级回收</b></span>
+        <span style="display:none">来源 · <b id="srcLabel">线上快照</b></span>
       </div>
-    </div>
-    <div style="text-align:right">
-      <label class="upload-btn" for="fileInput">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M5 21h14"/></svg>
-        上传 Excel 更新数据
-      </label>
-      <input type="file" id="fileInput" accept=".xls,.xlsx,.csv" style="display:none">
-      <div class="upload-hint">仅在你本地浏览器内解析，<b>不会上传到任何服务器</b>。支持每日 Campaign 回收文件，上传后自动更新数据与更新时间。</div>
     </div>
   </div>
 
@@ -158,8 +27,7 @@
 
   <div class="panel">
     <div class="controls">
-      <div class="field">
-        <label>分组维度</label>
+      <div class="field"><label>分组维度</label>
         <div class="seg" id="groupSeg">
           <button data-g="优化师" class="on">优化师</button>
           <button data-g="媒体">媒体</button>
@@ -186,325 +54,31 @@
       </div>
       <button class="reset" id="resetBtn">重置筛选</button>
     </div>
-
     <div class="resultbar">
       <div>分组 <b id="rowCount">0</b> 行 · 当前筛选合计花费 <b id="filteredSpend">$0</b></div>
       <div class="chiprow" id="chiprow"></div>
     </div>
-
     <div class="tablescroll">
       <table id="tbl"><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody></table>
     </div>
   </div>
 
   <div class="foot">
-    分组维度可任意切换，其余维度叠加筛选；默认按当前分组<b>花费降序</b>，点表头可改排序。<br>
-    「重置筛选」回到初始界面：分组回到优化师、清空所有筛选条件。
+    数据为管理员最近一次发布的快照。分组维度可切换，其余维度叠加筛选；默认按当前分组<b>花费降序</b>，点表头可改排序。
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
 
+<script src="dashboard.js"></script>
 <script>
-const EMBEDDED = {"meta": {"drama": "The Luna's Second Choice", "date": "2026-05-29", "updated": "2026-05-29 18:30", "total_spend": 21206.58, "total_rev": 4487.51, "total_act": 5045, "total_pay": 418}, "rows": [{"优化师": "0", "媒体": "Facebook", "类型": "其他", "事件": "其他", "spend": 0.0, "rev": 108.92, "act": 230, "pay": 8, "drama": "The Luna's Second Choice"}, {"优化师": "0", "媒体": "TikTok", "类型": "其他", "事件": "其他", "spend": 0.0, "rev": 28.83, "act": 6, "pay": 2, "drama": "The Luna's Second Choice"}, {"优化师": "CSH", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 0.0, "rev": 0.0, "act": 1, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "CSH", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 0.0, "rev": 0.0, "act": 2, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "Cecilia", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 97.61, "rev": 20.66, "act": 31, "pay": 2, "drama": "The Luna's Second Choice"}, {"优化师": "Cecilia", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 641.48, "rev": 160.37, "act": 71, "pay": 14, "drama": "The Luna's Second Choice"}, {"优化师": "Cecilia", "媒体": "TikTok", "类型": "W2A", "事件": "VO", "spend": 0.03, "rev": 0.0, "act": 0, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "Dora", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 120.99, "rev": 8.03, "act": 125, "pay": 1, "drama": "The Luna's Second Choice"}, {"优化师": "Dora", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 198.69, "rev": 14.53, "act": 24, "pay": 2, "drama": "The Luna's Second Choice"}, {"优化师": "Dora", "媒体": "TikTok", "类型": "Install", "事件": "VO", "spend": 9.69, "rev": 0.05, "act": 5, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "Dora", "媒体": "TikTok", "类型": "W2A", "事件": "VO", "spend": 95.64, "rev": 52.16, "act": 33, "pay": 4, "drama": "The Luna's Second Choice"}, {"优化师": "FEE", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 109.12, "rev": 15.35, "act": 38, "pay": 1, "drama": "The Luna's Second Choice"}, {"优化师": "FEE", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 50.05, "rev": 14.17, "act": 5, "pay": 1, "drama": "The Luna's Second Choice"}, {"优化师": "FEE", "媒体": "TikTok", "类型": "Install", "事件": "VO", "spend": 60.38, "rev": 0.18, "act": 17, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "FEE", "媒体": "TikTok", "类型": "W2A", "事件": "VO", "spend": 104.31, "rev": 72.75, "act": 48, "pay": 5, "drama": "The Luna's Second Choice"}, {"优化师": "Gawaine", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 272.27, "rev": 75.57, "act": 43, "pay": 5, "drama": "The Luna's Second Choice"}, {"优化师": "Gawaine", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 446.85, "rev": 40.6, "act": 36, "pay": 4, "drama": "The Luna's Second Choice"}, {"优化师": "Gawaine", "媒体": "TikTok", "类型": "W2A", "事件": "VO", "spend": 0.27, "rev": 0.0, "act": 0, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "Grizz", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 0.0, "rev": 0.02, "act": 1, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "Grizz", "媒体": "TikTok", "类型": "W2A", "事件": "VO", "spend": 0.0, "rev": 10.49, "act": 1, "pay": 1, "drama": "The Luna's Second Choice"}, {"优化师": "LDH", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 302.32, "rev": 26.39, "act": 150, "pay": 7, "drama": "The Luna's Second Choice"}, {"优化师": "LDH", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 1266.49, "rev": 137.68, "act": 198, "pay": 13, "drama": "The Luna's Second Choice"}, {"优化师": "LDH", "媒体": "TikTok", "类型": "Install", "事件": "VO", "spend": 50.94, "rev": 7.81, "act": 15, "pay": 1, "drama": "The Luna's Second Choice"}, {"优化师": "LDH", "媒体": "TikTok", "类型": "W2A", "事件": "VO", "spend": 148.43, "rev": 77.15, "act": 45, "pay": 6, "drama": "The Luna's Second Choice"}, {"优化师": "LMM", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 21.88, "rev": 1.18, "act": 18, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "LMM", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 218.5, "rev": 58.3, "act": 82, "pay": 8, "drama": "The Luna's Second Choice"}, {"优化师": "LYQ", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 13.78, "rev": 0.89, "act": 7, "pay": 1, "drama": "The Luna's Second Choice"}, {"优化师": "LYQ", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 1461.78, "rev": 516.04, "act": 367, "pay": 48, "drama": "The Luna's Second Choice"}, {"优化师": "LYQ", "媒体": "TikTok", "类型": "W2A", "事件": "VO", "spend": 0.23, "rev": 0.0, "act": 0, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "LYX", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 388.87, "rev": 143.32, "act": 262, "pay": 13, "drama": "The Luna's Second Choice"}, {"优化师": "LYX", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 417.15, "rev": 61.81, "act": 68, "pay": 6, "drama": "The Luna's Second Choice"}, {"优化师": "LYX", "媒体": "TikTok", "类型": "Install", "事件": "VO", "spend": 31.94, "rev": 1.51, "act": 7, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "LYX", "媒体": "TikTok", "类型": "W2A", "事件": "VO", "spend": 0.0, "rev": 10.49, "act": 1, "pay": 1, "drama": "The Luna's Second Choice"}, {"优化师": "Mike", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 196.95, "rev": 49.66, "act": 177, "pay": 7, "drama": "The Luna's Second Choice"}, {"优化师": "Mike", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 405.66, "rev": 67.77, "act": 101, "pay": 9, "drama": "The Luna's Second Choice"}, {"优化师": "Mike", "媒体": "TikTok", "类型": "W2A", "事件": "VO", "spend": 1.46, "rev": 0.02, "act": 3, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "PY", "媒体": "Facebook", "类型": "W2A", "事件": "AEO", "spend": 350.18, "rev": 73.99, "act": 58, "pay": 7, "drama": "The Luna's Second Choice"}, {"优化师": "PY", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 719.97, "rev": 127.45, "act": 93, "pay": 13, "drama": "The Luna's Second Choice"}, {"优化师": "PY", "媒体": "TikTok", "类型": "W2A", "事件": "AEO", "spend": 40.37, "rev": 2.4, "act": 23, "pay": 1, "drama": "The Luna's Second Choice"}, {"优化师": "PY", "媒体": "TikTok", "类型": "W2A", "事件": "VO", "spend": 56.16, "rev": 11.27, "act": 4, "pay": 1, "drama": "The Luna's Second Choice"}, {"优化师": "SYQ", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 28.04, "rev": 4.17, "act": 6, "pay": 1, "drama": "The Luna's Second Choice"}, {"优化师": "SYQ", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 467.84, "rev": 61.6, "act": 65, "pay": 9, "drama": "The Luna's Second Choice"}, {"优化师": "SYQ", "媒体": "TikTok", "类型": "W2A", "事件": "AEO", "spend": 1.92, "rev": 0.0, "act": 0, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "SYQ", "媒体": "TikTok", "类型": "W2A", "事件": "VO", "spend": 13.87, "rev": 4.9, "act": 3, "pay": 1, "drama": "The Luna's Second Choice"}, {"优化师": "Viven", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 8.27, "rev": 0.5, "act": 9, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "Viven", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 162.59, "rev": 1.86, "act": 29, "pay": 1, "drama": "The Luna's Second Choice"}, {"优化师": "Viven", "媒体": "TikTok", "类型": "Install", "事件": "VO", "spend": 5.76, "rev": 1.1, "act": 4, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "Viven", "媒体": "TikTok", "类型": "W2A", "事件": "VO", "spend": 3.34, "rev": 0.17, "act": 4, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "ZJH", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 129.74, "rev": 14.18, "act": 50, "pay": 1, "drama": "The Luna's Second Choice"}, {"优化师": "ZJH", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 821.49, "rev": 103.96, "act": 104, "pay": 9, "drama": "The Luna's Second Choice"}, {"优化师": "ZJH", "媒体": "TikTok", "类型": "W2A", "事件": "VO", "spend": 0.07, "rev": 0.0, "act": 0, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "cody", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 0.0, "rev": 5.13, "act": 1, "pay": 1, "drama": "The Luna's Second Choice"}, {"优化师": "cody", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 36.25, "rev": 4.53, "act": 6, "pay": 1, "drama": "The Luna's Second Choice"}, {"优化师": "cody", "媒体": "TikTok", "类型": "W2A", "事件": "VO", "spend": 3.6, "rev": 0.0, "act": 0, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "cr", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 192.07, "rev": 58.69, "act": 85, "pay": 5, "drama": "The Luna's Second Choice"}, {"优化师": "cr", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 1557.09, "rev": 434.37, "act": 326, "pay": 41, "drama": "The Luna's Second Choice"}, {"优化师": "cr", "媒体": "TikTok", "类型": "Install", "事件": "VO", "spend": 1.76, "rev": 0.86, "act": 5, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "hj", "媒体": "Facebook", "类型": "Install", "事件": "AEO", "spend": 233.54, "rev": 42.07, "act": 43, "pay": 3, "drama": "The Luna's Second Choice"}, {"优化师": "hj", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 1256.37, "rev": 221.76, "act": 216, "pay": 16, "drama": "The Luna's Second Choice"}, {"优化师": "hj", "媒体": "Facebook", "类型": "W2A", "事件": "AEO", "spend": 22.24, "rev": 0.4, "act": 1, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "hj", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 954.44, "rev": 113.62, "act": 88, "pay": 11, "drama": "The Luna's Second Choice"}, {"优化师": "hj", "媒体": "TikTok", "类型": "W2A", "事件": "AEO", "spend": 33.51, "rev": 4.94, "act": 6, "pay": 1, "drama": "The Luna's Second Choice"}, {"优化师": "hj", "媒体": "TikTok", "类型": "W2A", "事件": "VO", "spend": 38.82, "rev": 0.89, "act": 11, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "jxb", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 21.37, "rev": 3.74, "act": 18, "pay": 1, "drama": "The Luna's Second Choice"}, {"优化师": "jxb", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 121.31, "rev": 11.44, "act": 17, "pay": 1, "drama": "The Luna's Second Choice"}, {"优化师": "liuw", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 25.9, "rev": 10.67, "act": 4, "pay": 1, "drama": "The Luna's Second Choice"}, {"优化师": "wgh", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 108.57, "rev": 11.57, "act": 11, "pay": 2, "drama": "The Luna's Second Choice"}, {"优化师": "wwl", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 349.78, "rev": 47.72, "act": 117, "pay": 7, "drama": "The Luna's Second Choice"}, {"优化师": "wwl", "媒体": "TikTok", "类型": "Install", "事件": "VO", "spend": 0.41, "rev": 0.0, "act": 0, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "wwl", "媒体": "TikTok", "类型": "W2A", "事件": "VO", "spend": 66.78, "rev": 1.77, "act": 447, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "wyq", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 76.06, "rev": 41.29, "act": 10, "pay": 3, "drama": "The Luna's Second Choice"}, {"优化师": "yjy", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 72.48, "rev": 6.35, "act": 44, "pay": 2, "drama": "The Luna's Second Choice"}, {"优化师": "yjy", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 443.49, "rev": 55.91, "act": 82, "pay": 6, "drama": "The Luna's Second Choice"}, {"优化师": "yjy", "媒体": "TikTok", "类型": "W2A", "事件": "VO", "spend": 0.0, "rev": 0.0, "act": 1, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "zhb", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 1.83, "rev": 0.0, "act": 0, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "zhb", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 204.81, "rev": 26.59, "act": 12, "pay": 3, "drama": "The Luna's Second Choice"}, {"优化师": "zht", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 43.28, "rev": 2.31, "act": 15, "pay": 2, "drama": "The Luna's Second Choice"}, {"优化师": "zhub", "媒体": "Facebook", "类型": "Install", "事件": "VO", "spend": 120.92, "rev": 10.37, "act": 100, "pay": 1, "drama": "The Luna's Second Choice"}, {"优化师": "zhub", "媒体": "Facebook", "类型": "W2A", "事件": "AEO", "spend": 179.21, "rev": 2.77, "act": 17, "pay": 0, "drama": "The Luna's Second Choice"}, {"优化师": "zhub", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 358.15, "rev": 58.95, "act": 88, "pay": 6, "drama": "The Luna's Second Choice"}, {"优化师": "zsp", "媒体": "Facebook", "类型": "W2A", "事件": "VO", "spend": 4739.17, "rev": 1118.55, "act": 604, "pay": 90, "drama": "The Luna's Second Choice"}]};
-
-const BASE = { 'W2A':0.38, 'Install':0.33, '其他':0.33 };
-const ALL_DRAMA = '全部剧集';
-
-let RAW = EMBEDDED.rows.map(r=>({...r}));
-let META = {...EMBEDDED.meta};
-let SOURCE = '内置快照';
-let INITIAL_DRAMA = META.drama;
-
-function nowStamp(){
-  const d=new Date(), p=n=>(''+n).padStart(2,'0');
-  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
-}
-
-const state = {
-  group:'优化师',
-  drama: META.drama,
-  filters:{ '媒体':'全部','类型':'全部','事件':'全部','优化师':'全部' },
-  sortKey:'spend', sortDir:-1
-};
-
-const $=id=>document.getElementById(id);
-const money=n=> (n>=1e6? '$'+(n/1e6).toFixed(2)+'M' : n>=1e3? '$'+(n/1e3).toFixed(1)+'K' : '$'+Math.round(n));
-const moneyFull=n=>'$'+Math.round(n).toLocaleString('en-US');
-const pct=n=> (n*100).toFixed(1)+'%';
-const num=n=> Math.round(n).toLocaleString('en-US');
-const uniq=arr=>[...new Set(arr)].filter(x=>x!==undefined&&x!==null&&x!=='');
-
-const GROUP_LABEL={'优化师':'优化师','媒体':'媒体','类型':'类型','事件':'投放事件'};
-
-const COLS=[
-  {k:'name', label:g=>GROUP_LABEL[g]},
-  {k:'spend', label:()=>'花费', fmt:v=>moneyFull(v.spend)},
-  {k:'share', label:()=>'占比', fmt:(v,tot)=>shareCell(v.spend/tot)},
-  {k:'roas', label:()=>'ROAS', fmt:v=>roasCell(v)},
-  {k:'cpi', label:()=>'CPI', fmt:v=>'$'+(v.act? (v.spend/v.act):0).toFixed(2)},
-  {k:'cpp', label:()=>'CPP', fmt:v=>'$'+(v.pay? (v.spend/v.pay):0).toFixed(2)},
-  {k:'payrate', label:()=>'付费率', fmt:v=>pct(v.act? v.pay/v.act:0)},
-  {k:'act', label:()=>'激活数', fmt:v=>num(v.act)},
-  {k:'pay', label:()=>'付费数', fmt:v=>num(v.pay)},
-];
-function sortVal(v,key,tot){
-  switch(key){
-    case 'name': return v.name;
-    case 'spend': return v.spend;
-    case 'share': return v.spend/tot;
-    case 'roas': return v.spend? v.rev/v.spend:0;
-    case 'cpi': return v.act? v.spend/v.act:1e9;
-    case 'cpp': return v.pay? v.spend/v.pay:1e9;
-    case 'payrate': return v.act? v.pay/v.act:0;
-    case 'act': return v.act;
-    case 'pay': return v.pay;
-  }
-}
-function shareCell(s){ return `<span class="share-cell"><span class="bar"><i style="width:${Math.min(100,s*100).toFixed(1)}%"></i></span><span>${(s*100).toFixed(1)}%</span></span>`; }
-function roasCell(v){
-  const roas=v.spend? v.rev/v.spend:0, tgt=v._tgt;
-  let cls='mid'; if(roas>=tgt) cls='ok'; else if(roas<tgt-0.05) cls='bad';
-  return `<span class="pill ${cls}">${(roas*100).toFixed(1)}%</span>`;
-}
-
-function currentRows(){
-  return RAW.filter(r=>{
-    if(state.drama && state.drama!==ALL_DRAMA && r.drama && r.drama!==state.drama) return false;
-    for(const dim of ['媒体','类型','事件','优化师']){
-      const f=state.filters[dim];
-      if(f && f!=='全部' && r[dim]!==f) return false;
-    }
-    return true;
-  });
-}
-function aggregate(rows, dim){
-  const m=new Map();
-  for(const r of rows){
-    if(!m.has(r[dim])) m.set(r[dim],{name:r[dim],spend:0,rev:0,act:0,pay:0,_tn:0,_td:0});
-    const o=m.get(r[dim]);
-    o.spend+=r.spend; o.rev+=r.rev; o.act+=r.act; o.pay+=r.pay;
-    const b=BASE[r['类型']]??0.33; o._tn+=b*r.spend; o._td+=r.spend;
-  }
-  for(const o of m.values()) o._tgt=o._td? o._tn/o._td:0.33;
-  return [...m.values()];
-}
-
-function render(){
-  const rows=currentRows();
-  const tot=rows.reduce((s,r)=>s+r.spend,0);
-  const rev=rows.reduce((s,r)=>s+r.rev,0);
-  const act=rows.reduce((s,r)=>s+r.act,0);
-  const pay=rows.reduce((s,r)=>s+r.pay,0);
-  const nopt=new Set(rows.map(r=>r['优化师'])).size;
-  $('stats').innerHTML=[
-    {k:'总花费',v:money(tot),m:moneyFull(tot)},
-    {k:'整体 ROAS (D0)',v:(tot? rev/tot*100:0).toFixed(1)+'%',m:'营收 '+moneyFull(rev)},
-    {k:'激活数 · CPI',v:num(act),m:'CPI $'+(act? tot/act:0).toFixed(2)},
-    {k:'优化师数 · 付费率',v:nopt,m:'付费率 '+pct(act? pay/act:0)},
-  ].map(s=>`<div class="stat"><div class="k">${s.k}</div><div class="v">${s.v}</div><div class="meta">${s.m}</div></div>`).join('');
-
-  let agg=aggregate(rows, state.group);
-  const dir=state.sortDir;
-  agg.sort((a,b)=>{
-    const va=sortVal(a,state.sortKey,tot), vb=sortVal(b,state.sortKey,tot);
-    if(typeof va==='string') return dir*va.localeCompare(vb);
-    return dir*(va-vb);
-  });
-
-  $('thead').innerHTML=COLS.map(c=>{
-    const sorted=c.k===state.sortKey?'sorted':'';
-    const arr=c.k===state.sortKey?(dir<0?'▾':'▴'):'⇅';
-    return `<th data-k="${c.k}" class="${sorted}">${c.label(state.group)}<span class="arr">${arr}</span></th>`;
-  }).join('');
-  $('thead').querySelectorAll('th').forEach(th=>th.onclick=()=>{
-    const k=th.dataset.k;
-    if(state.sortKey===k) state.sortDir*=-1; else { state.sortKey=k; state.sortDir=(k==='name'?1:-1); }
-    render();
-  });
-
-  const tb=$('tbody');
-  if(!agg.length){ tb.innerHTML=`<tr><td colspan="${COLS.length}"><div class="empty">没有符合当前筛选条件的数据</div></td></tr>`; }
-  else{
-    let html=agg.map((v,i)=>'<tr>'+COLS.map(c=>{
-      if(c.k==='name'){ const rk=(state.sortKey==='spend'&&dir<0)?`<span class="rank">${i+1}</span>`:''; return `<td>${rk}${v.name}</td>`; }
-      return `<td>${c.fmt(v,tot)}</td>`;
-    }).join('')+'</tr>').join('');
-    const totObj={name:'合计',spend:tot,rev,act,pay,_tgt:0};
-    let tn=0,td=0; rows.forEach(r=>{tn+=(BASE[r['类型']]??.33)*r.spend; td+=r.spend;}); totObj._tgt=td?tn/td:.33;
-    html+='<tr class="total">'+COLS.map(c=>{
-      if(c.k==='name') return `<td>合计 (${agg.length})</td>`;
-      if(c.k==='share') return `<td>100%</td>`;
-      if(c.k==='roas') return `<td>${(tot?rev/tot*100:0).toFixed(1)}%</td>`;
-      return `<td>${c.fmt(totObj,tot)}</td>`;
-    }).join('')+'</tr>';
-    tb.innerHTML=html;
-  }
-
-  $('rowCount').textContent=agg.length;
-  $('filteredSpend').textContent=moneyFull(tot);
-  const chips=[];
-  if(state.drama && state.drama!==ALL_DRAMA) chips.push(state.drama);
-  for(const dim of ['媒体','类型','事件','优化师']){ if(state.filters[dim]!=='全部') chips.push(state.filters[dim]); }
-  $('chiprow').innerHTML=chips.map(c=>`<span class="chip">${c}</span>`).join('');
-}
-
-/* ---- drama searchable combo ---- */
-function dramaCounts(){ const m=new Map(); for(const r of RAW){ m.set(r.drama,(m.get(r.drama)||0)+r.spend); } return m; }
-function renderDramaList(filter){
-  const m=dramaCounts(), all=[...m.keys()].sort((a,b)=>m.get(b)-m.get(a));
-  const f=(filter||'').toLowerCase(), matched=all.filter(d=>!f||d.toLowerCase().includes(f));
-  let html='';
-  if(!f || ALL_DRAMA.includes(f) || '全部'.includes(f)) html+=`<div class="combo-opt allopt ${state.drama===ALL_DRAMA?'sel':''}" data-v="${ALL_DRAMA}">全部剧集 <span class="cnt">${all.length} 部</span></div>`;
-  if(!matched.length && f && !ALL_DRAMA.includes(f)) html+='<div class="combo-empty">无匹配剧目</div>';
-  html+=matched.map(d=>`<div class="combo-opt ${d===state.drama?'sel':''}" data-v="${d.replace(/"/g,'&quot;')}" title="${d.replace(/"/g,'&quot;')}">${d} <span class="cnt">$${Math.round(m.get(d)).toLocaleString()}</span></div>`).join('');
-  $('dramaList').innerHTML=html;
-  $('dramaList').querySelectorAll('.combo-opt').forEach(el=>el.onclick=()=>selectDrama(el.dataset.v));
-}
-function selectDrama(v){ state.drama=v; $('f_drama').value=(v===ALL_DRAMA?'全部剧集':v); closeCombo(); populateFilters(); render(); }
-function openCombo(){ $('dramaCombo').classList.add('open'); renderDramaList(''); }
-function closeCombo(){ $('dramaCombo').classList.remove('open'); $('f_drama').value=(state.drama===ALL_DRAMA?'全部剧集':state.drama); }
-
-/* ---- optimizer searchable combo ---- */
-function optScope(){ return (state.drama===ALL_DRAMA)? RAW : RAW.filter(r=>r.drama===state.drama); }
-function renderOptList(filter){
-  const m=new Map(); for(const r of optScope()){ m.set(r['优化师'],(m.get(r['优化师'])||0)+r.spend); }
-  const all=[...m.keys()].sort((a,b)=>m.get(b)-m.get(a));
-  const f=(filter||'').toLowerCase(), matched=all.filter(o=>!f||(''+o).toLowerCase().includes(f));
-  let html='';
-  if(!f || '全部'.includes(f)) html+=`<div class="combo-opt allopt ${state.filters['优化师']==='全部'?'sel':''}" data-v="全部">全部优化师 <span class="cnt">${all.length} 人</span></div>`;
-  if(!matched.length && f) html+='<div class="combo-empty">无匹配优化师</div>';
-  html+=matched.map(o=>`<div class="combo-opt ${o===state.filters['优化师']?'sel':''}" data-v="${(''+o).replace(/"/g,'&quot;')}">${o} <span class="cnt">$${Math.round(m.get(o)).toLocaleString()}</span></div>`).join('');
-  $('optList').innerHTML=html;
-  $('optList').querySelectorAll('.combo-opt').forEach(el=>el.onclick=()=>selectOpt(el.dataset.v));
-}
-function selectOpt(v){ state.filters['优化师']=v; $('f_优化师').value=(v==='全部'?'全部':v); closeOptCombo(); render(); }
-function openOptCombo(){ $('optCombo').classList.add('open'); renderOptList(''); }
-function closeOptCombo(){ $('optCombo').classList.remove('open'); $('f_优化师').value=(state.filters['优化师']==='全部'?'全部':state.filters['优化师']); }
-
-function populateFilters(){
-  $('f_drama').value=(state.drama===ALL_DRAMA?'全部剧集':state.drama);
-  const scope=(state.drama===ALL_DRAMA)? RAW : RAW.filter(r=>r.drama===state.drama);
-  for(const dim of ['媒体','类型','事件']){
-    const sel=$('f_'+dim);
-    const vals=uniq(scope.map(r=>r[dim])).sort((a,b)=>(''+a).localeCompare(b));
-    const cur=state.filters[dim];
-    sel.innerHTML='<option>全部</option>'+vals.map(v=>`<option ${v===cur?'selected':''}>${v}</option>`).join('');
-    if(cur!=='全部' && !vals.includes(cur)){ state.filters[dim]='全部'; sel.value='全部'; }
-  }
-  const optVals=uniq(scope.map(r=>r['优化师']));
-  if(state.filters['优化师']!=='全部' && !optVals.includes(state.filters['优化师'])) state.filters['优化师']='全部';
-  $('f_优化师').value=(state.filters['优化师']==='全部'?'全部':state.filters['优化师']);
-  $('dramaTitle').textContent=(state.drama===ALL_DRAMA?'全部剧集':state.drama);
-  $('dateLabel').textContent=META.updated||META.date||'—';
-  $('srcLabel').textContent=SOURCE;
-}
-
-/* ---- events ---- */
-$('groupSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
-  $('groupSeg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));
-  b.classList.add('on'); state.group=b.dataset.g; state.sortKey='spend'; state.sortDir=-1; render();
-});
-$('f_drama').onfocus=openCombo; $('f_drama').onclick=openCombo;
-$('f_drama').oninput=e=>{ $('dramaCombo').classList.add('open'); renderDramaList(e.target.value); };
-$('f_drama').onkeydown=e=>{ if(e.key==='Enter'){ const x=$('dramaList').querySelector('.combo-opt'); if(x) selectDrama(x.dataset.v); e.preventDefault(); } else if(e.key==='Escape') closeCombo(); };
-$('f_优化师').onfocus=openOptCombo; $('f_优化师').onclick=openOptCombo;
-$('f_优化师').oninput=e=>{ $('optCombo').classList.add('open'); renderOptList(e.target.value); };
-$('f_优化师').onkeydown=e=>{ if(e.key==='Enter'){ const x=$('optList').querySelector('.combo-opt'); if(x) selectOpt(x.dataset.v); e.preventDefault(); } else if(e.key==='Escape') closeOptCombo(); };
-document.addEventListener('click',e=>{ if(!$('dramaCombo').contains(e.target)) closeCombo(); if(!$('optCombo').contains(e.target)) closeOptCombo(); });
-['媒体','类型','事件'].forEach(dim=>{ $('f_'+dim).onchange=e=>{ state.filters[dim]=e.target.value; render(); }; });
-
-$('resetBtn').onclick=()=>{
-  state.group='优化师'; state.sortKey='spend'; state.sortDir=-1;
-  state.drama=INITIAL_DRAMA;
-  state.filters={'媒体':'全部','类型':'全部','事件':'全部','优化师':'全部'};
-  $('groupSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on', x.dataset.g==='优化师'));
-  closeCombo(); closeOptCombo(); populateFilters(); render();
-  toast('已重置到初始界面');
-};
-
-let tt; function toast(msg,err){ const t=$('toast'); t.textContent=msg; t.className='toast show'+(err?' err':''); clearTimeout(tt); tt=setTimeout(()=>t.className='toast',err?4000:2400); }
-
-/* ---- upload & re-aggregate ---- */
-const RX_TYPE=/_(W2A|Install)_/i, RX_EVENT=/_(VO|AEO)_/i;
-const parseType=s=>{const m=(''+s).match(RX_TYPE); return !m?'其他':(m[1].toLowerCase()==='w2a'?'W2A':'Install');};
-const parseEvent=s=>{const m=(''+s).match(RX_EVENT); return !m?'其他':m[1].toUpperCase();};
-const cleanDrama=s=>(''+s).replace(/\([0-9a-fA-F]+\)\s*$/,'').trim();
-const mediaMap=s=>{s=(''+s).toLowerCase(); return s==='fb'?'Facebook':s==='tt'?'TikTok':(s||'其他');};
-
-function resolveHeaders(cols){
-  const find=(...c)=>{ for(const x of cols) for(const y of c) if(x===y) return x; for(const x of cols) for(const y of c) if((''+x).includes(y)) return x; return null; };
-  return { book:find('对应英语书籍名称','书籍名称(书籍ID)','书籍名称'), ch:find('渠道名称'), media:find('媒体类型'),
-    spend:find('投放花费'), d0:find('d0','revenue(生命周期)'), act:find('应用设备激活数'), pay:find('付费用户数(首日)') };
-}
-function ingestRows(json, H){
-  const map=new Map(); let n=0;
-  for(const row of json){
-    const drama=cleanDrama(row[H.book]); if(!drama) continue;
-    const ch=row[H.ch]||''; const opt=(''+ch).split('_')[0].trim()||'未知';
-    const key=drama+'|'+opt+'|'+mediaMap(row[H.media])+'|'+parseType(ch)+'|'+parseEvent(ch);
-    if(!map.has(key)) map.set(key,{drama,'优化师':opt,'媒体':mediaMap(row[H.media]),'类型':parseType(ch),'事件':parseEvent(ch),spend:0,rev:0,act:0,pay:0});
-    const o=map.get(key); o.spend+=(+row[H.spend]||0); o.rev+=(+row[H.d0]||0); o.act+=(+row[H.act]||0); o.pay+=(+row[H.pay]||0); n++;
-  }
-  return {rows:[...map.values()],count:n};
-}
-function finishIngest(result, dateGuess){
-  if(!result.rows.length){ toast('未找到有效数据，请检查是否为 Campaign 回收文件',true); return; }
-  RAW=result.rows;
-  META={drama:"The Luna's Second Choice", date:dateGuess||'', updated:nowStamp()};
-  SOURCE='上传文件 · '+result.count.toLocaleString()+' 行';
-  const lunas=uniq(RAW.map(r=>r.drama)).filter(d=>/luna's second choice/i.test(d));
-  state.drama=lunas[0] || uniq(RAW.map(r=>r.drama)).sort()[0];
-  INITIAL_DRAMA=state.drama;
-  state.group='优化师'; state.sortKey='spend'; state.sortDir=-1;
-  $('groupSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on', x.dataset.g==='优化师'));
-  state.filters={'媒体':'全部','类型':'全部','事件':'全部','优化师':'全部'};
-  populateFilters(); render();
-  toast('数据已更新 ✓ 共解析 '+result.count.toLocaleString()+' 行');
-}
-$('fileInput').onchange=function(e){
-  const file=e.target.files[0]; if(!file) return;
-  toast('正在解析 '+file.name+' …');
-  const dateGuess=(file.name.match(/20\d{2}-\d{2}-\d{2}/)||[])[0];
-  const reader=new FileReader();
-  reader.onload=function(ev){
-    const buf=ev.target.result, bytes=new Uint8Array(buf).subarray(0,8);
-    const isZip=bytes[0]===0x50&&bytes[1]===0x4B, isOle=bytes[0]===0xD0&&bytes[1]===0xCF;
-    try{
-      if(isZip||isOle){
-        const wb=XLSX.read(buf,{type:'array'}), ws=wb.Sheets[wb.SheetNames[0]];
-        const json=XLSX.utils.sheet_to_json(ws,{defval:''});
-        if(!json.length){ toast('文件为空',true); return; }
-        const H=resolveHeaders(Object.keys(json[0]));
-        if(!H.book||!H.ch){ toast('未识别到「对应英语书籍名称 / 渠道名称」列',true); return; }
-        finishIngest(ingestRows(json,H), dateGuess);
-      }else{
-        const text=new TextDecoder('utf-8').decode(buf);
-        let H=null; const map=new Map(); let n=0;
-        Papa.parse(text,{header:true,skipEmptyLines:true,
-          step:function(res){
-            const row=res.data;
-            if(!H){ H=resolveHeaders(Object.keys(row)); if(!H.book||!H.ch){ toast('未识别到关键列',true); throw 'stop'; } }
-            const drama=cleanDrama(row[H.book]); if(!drama) return;
-            const ch=row[H.ch]||'', opt=(''+ch).split('_')[0].trim()||'未知';
-            const key=drama+'|'+opt+'|'+mediaMap(row[H.media])+'|'+parseType(ch)+'|'+parseEvent(ch);
-            if(!map.has(key)) map.set(key,{drama,'优化师':opt,'媒体':mediaMap(row[H.media]),'类型':parseType(ch),'事件':parseEvent(ch),spend:0,rev:0,act:0,pay:0});
-            const o=map.get(key); o.spend+=(+row[H.spend]||0); o.rev+=(+row[H.d0]||0); o.act+=(+row[H.act]||0); o.pay+=(+row[H.pay]||0); n++;
-          },
-          complete:function(){ finishIngest({rows:[...map.values()],count:n}, dateGuess); },
-          error:function(err){ toast('解析失败：'+err,true); }
-        });
-      }
-    }catch(err){ if(err!=='stop') toast('解析出错：'+err,true); }
-  };
-  reader.onerror=()=>toast('读取文件失败',true);
-  reader.readAsArrayBuffer(file);
-  e.target.value='';
-};
-
-/* init */
-RAW.forEach(r=>{ if(!r.drama) r.drama=META.drama; });
-populateFilters(); render();
+  Dashboard.mount();
+  fetch('data.json?t='+Date.now())
+    .then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); })
+    .then(d=>{ Dashboard.setSource('线上快照'); Dashboard.load(d); })
+    .catch(err=>{
+      document.getElementById('dateLabel').textContent='数据加载失败';
+      document.getElementById('tbody').innerHTML='<tr><td colspan="9"><div class="empty">未能加载 data.json（'+err+'）。请确认仓库里有 data.json，或稍后刷新。</div></td></tr>';
+    });
 </script>
 </body>
 </html>
